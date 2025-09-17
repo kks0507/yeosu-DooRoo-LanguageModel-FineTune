@@ -25,9 +25,9 @@ from trl import SFTTrainer
 # 1. 사용자 정보 설정
 # ⚠️ 주의: 아래 토큰이 포함된 코드를 외부에 공유하지 마세요.
 # =================================================================================
-HF_TOKEN = "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"
-DATASET_REPO = "kingkim/yeosu_island"      # 학습 데이터셋이 있는 저장소
-MODEL_REPO = "kingkim/yeosu_dooroo_2"   # 학습 결과(모델)를 업로드할 저장소
+HF_TOKEN = "Your_HF_token"
+DATASET_REPO = "your_dataset_repository"      # 학습 데이터셋이 있는 저장소
+MODEL_REPO = "your_model_repository"   # 학습 결과(모델)를 업로드할 저장소
 
 # =================================================================================
 # 2. 모델 및 토크나이저 불러오기
