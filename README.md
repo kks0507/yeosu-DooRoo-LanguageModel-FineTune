@@ -1,110 +1,59 @@
-# 여수 Dooroo 전용 언어모델 학습 프로세스
+# Dooroo2025: 여수 관광 특화 언어 모델 및 RAG 시스템
 
-## 중소벤처기업부 창업성장기술개발사업(디딤돌):
+## 1\. 프로젝트 개요
 
-  - **과제 명:** 생성형 AI 기반 관광퀴즈 게임 플랫폼 연구 및 개발.
-  - 여수 Dooroo 모델 학습은 크게 3가지 과정으로 구성됩니다.
+  - **과제 명:** (중소벤처기업부 창업성장기술개발사업) 생성형 AI 기반 관광퀴즈 게임 플랫폼 연구 및 개발
+  - **모델 명:** `Dooroo2025`
+  - **핵심 기능:** 여수 관광 정보에 특화된 질의응답 및 콘텐츠 생성
+  - **주요 기술:**
+      - **Fine-tuning:** `unsloth/Qwen3-4B-Instruct-2507` 모델을 여수 관광/섬 데이터로 파인튜닝
+      - **RAG (Retrieval-Augmented Generation):** Vector DB (ChromaDB)를 활용하여 실시간으로 정확한 정보 검색 및 답변 생성
+      - **LaaJ (LLM as a Judge):** Gemini 1.5 Flash를 이용한 자동화된 성능 평가 파이프라인 구축
 
-## 1\. 원천데이터를 학습에 맞게 가공하기
+## 2\. 전체 시스템 구성도 (System Architecture)
+<img width="1218" height="608" alt="KakaoTalk_20250925_145052708" src="https://github.com/user-attachments/assets/a13374b7-1dc3-4a3f-bb56-bb89522d5fb5" />
 
-### 원천데이터 구성
 
-원천데이터는 총 4가지 유형으로 이루어져 있습니다.
+## 3\. 데이터 구축 및 가공
 
-  * **섬, 관광**: 여수 지역사회연구소와 한국관광공사에서 제공하는 API를 원시데이터로 하여 구조화된 형식으로 만들었습니다.
-  * **식당, 숙소**: 한국관광공사에서 제공하는 API를 원시데이터로 하여 구조화된 형식으로 만들었으며, 각 요소 별로 100건의 규모를 가집니다.
+원천 데이터를 수집하여 모델 학습 및 RAG 시스템에 사용될 데이터셋과 벡터 DB를 구축합니다.
 
-| 유형 | 원천데이터 파일 이름 |
-| :--- | :--- |
-| 섬 | island-normalize.csv |
-| 관광 | tour-normalize.csv |
-| 식당 | yeosu-foodandhotel.xlsx |
-| 숙소 | yeosu-foodandhotel.xlsx |
+### 원천 데이터
 
-### 진행 현황
+  - **섬, 관광:** 여수 지역사회연구소, 한국관광공사 API 데이터
+  - **식당, 숙소:** 한국관광공사 API 데이터
 
-현재 4개 중 핵심 요소인 ‘섬’과 ‘관광’에 대한 작업이 마무리된 상태입니다.
+### 가공 및 결과물
 
-  * '섬' 관련 원천 데이터: 총 757건
-  * '관광' 관련 원천 데이터: 총 341건
+  - **Hugging Face Datasets:** 원천 데이터를 Q\&A 형식으로 가공 및 증강하여 업로드
+      - `kingkim/yeosu_island`: [https://huggingface.co/datasets/kingkim/yeosu\_island](https://huggingface.co/datasets/kingkim/yeosu_island)
+      - `kingkim/yeosu_tour`: [https://huggingface.co/datasets/kingkim/yeosu\_tour](https://huggingface.co/datasets/kingkim/yeosu_tour)
+  - **Vector DB:** RAG 시스템에서 실시간 검색에 사용될 ChromaDB 구축 (`Vectordb.py`)
 
-이 원천 데이터를 기반으로 각 유형별 질문-답변 형식의 1차 가공 및 증강을 진행했습니다. 이후 모델 학습에 최적화된 JSON 형식으로 변환하여 허깅페이스 데이터 셋에 업로드했습니다.
+## 4\. 언어 모델 파인튜닝 (Fine-tuning)
 
-| 유형 | 데이터 수 | 데이터 셋 레포지터리 |
-| :--- | :--- | :--- |
-| 섬 | 학습: 2270개<br>검증: 757개 | [https://huggingface.co/datasets/kingkim/yeosu\_island](https://huggingface.co/datasets/kingkim/yeosu_island) |
-| 관광 | 학습: 5430개<br>검증: 1360개 | [https://huggingface.co/datasets/kingkim/yeosu\_tour](https://huggingface.co/datasets/kingkim/yeosu_tour) |
+Hugging Face에 업로드된 데이터셋을 기반으로 LoRA(Low-Rank Adaptation) 기법을 사용하여 베이스 모델을 파인튜닝합니다.
 
-### 데이터 가공 코드
-
-**여수 섬 (yeosu-island 폴더)**
-
-| 목적 | 파일 이름 |
-| :--- | :--- |
-| 데이터 증강 및 가공 + 허깅페이스 업로드 | yeosu-island.py |
-
-**여수 관광 (yeosu-tour 폴더)**
-
-| 목적 | 파일 이름 |
-| :--- | :--- |
-| 데이터 분할 (행 기준) | splitdata.py |
-| 데이터 증강 및 가공 | generatedata/generatedata01.py |
-| 허깅페이스 업로드 | upload.py |
-
-## 2\. 가공한 학습데이터를 언어모델에 학습시키기
-
-허깅페이스에 업로드된 학습용 데이터 셋을 모델에 학습(파인튜닝)시킵니다.
-
-### 핵심 기술 스택
+### 기술 스택
 
 | 구분 | 내용 |
 | :--- | :--- |
-| 베이스 모델 | unsloth/Qwen3-4B-Instruct-2507 |
-| 파인튜닝 라이브러리 | Unsloth (LoRA-PEFT) |
-| Trainer | Hugging Face TRL (SFTTrainer) |
+| **베이스 모델** | `unsloth/Qwen3-4B-Instruct-2507` |
+| **파인튜닝 라이브러리** | Unsloth (LoRA-PEFT) |
+| **Trainer** | Hugging Face TRL (SFTTrainer) |
+| **결과물 (모델)** | `kingkim/Dooroo2025_v1.0` |
 
-### 프레임워크 버전
+## 5\. RAG 기반 답변 생성 및 평가
 
-| 프레임워크 | 버전 |
-| :--- | :--- |
-| TRL | 0.22.2 |
-| Transformers | 4.56.1 |
-| pytorch | 2.5.1+cu21 |
-| Datasets | 3.6.0 |
-| Tokenizers | 0.22.0 |
+파인튜닝된 모델과 RAG를 결합하여 사용자 질문에 대한 최종 답변을 생성하고, LaaJ(LLM as a Judge) 파이프라인을 통해 성능을 자동으로 평가합니다.
 
-### 모델 학습 코드
+### 1\) 하이브리드 답변 생성
 
-**여수 섬 (yeosu-island 폴더)**
+  - **동작 방식:** 사용자 질문이 입력되면, RAG 시스템이 Vector DB에서 가장 관련성 높은 정보를 검색하여 컨텍스트를 구성하고, 이를 파인튜닝된 모델에 전달하여 최종 답변을 생성합니다. (`Answer_RAG.py`)
+  - **기대 효과:** 파인튜닝을 통해 얻은 도메인 특화 지식과 RAG를 통해 확보한 사실 기반 정보가 결합되어 답변의 정확성과 신뢰도를 극대화합니다.
 
-| 목적 | 파일 이름 |
-| :--- | :--- |
-| 모델 파인튜닝 + 허깅페이스 업로드 | train.py |
+### 2\) LaaJ 자동화 평가 (GEVAL)
 
-## 3\. RAG 및 자동화된 평가 시스템 도입
-
-단순 파인튜닝을 넘어, 모델의 성능을 객관적으로 측정하고 실시간 정보에 기반한 정확한 답변을 생성하기 위해 RAG(Retrieval-Augmented Generation)와 LaaJ(LLM as a Judge) 평가 시스템을 도입했습니다.
-
-### 1\. 하이브리드 접근: 파인튜닝과 RAG의 결합
-
-학습 성과를 극대화하기 위해, **파인튜닝된 모델**과 **RAG 기법**을 결합한 하이브리드 형태로 시스템을 구성했습니다.
-
-  * **파인튜닝 모델:** 여수 관광 도메인에 특화된 지식과 말투를 학습합니다.
-  * **RAG:** 질문이 들어왔을 때 Vector DB에서 가장 관련성 높은 최신 정보를 실시간으로 검색하여 모델에 컨텍스트로 제공합니다.
-
-이러한 접근을 통해 모델이 가진 기본 지식에 더해, 특정 질문에 대한 사실 기반의 정확하고 풍부한 답변 생성이 가능해집니다.
-
-| 목적 | 파일 이름 |
-| :--- | :--- |
-| RAG 파이프라인 구현 | LAAJ\_answer\_rag.py |
-| Vector DB 구축 | LAAJ\_vectordb.py |
-
-### 2\. LaaJ 기반 자동화 평가 시스템 (GEVAL)
-
-학습 결과의 성능을 일관성 있고 객관적으로 평가하기 위해, **GEVAL 형식의 LaaJ(LLM as a Judge)** 평가 파이프라인을 구축했습니다.
-
-자체적으로 정의한 상세 평가 루브릭(Rubric)을 기반으로 **유창성(Fluency), 일관성(Coherence), 정확성(Accuracy), 완결성(Completeness)** 4가지 핵심 지표를 평가합니다. 이 과정을 자동화하여 모델 개선에 따른 성능 변화를 지속적으로 추적하고, 각 항목별 점수를 높여나가는 방식으로 모델을 고도화합니다.
-
-| 목적 | 파일 이름 |
-| :--- | :--- |
-| 4개 지표 자동 평가 수행 | LAAJ\_eval.py |
+  - **평가 모델:** `Gemini-1.5-Flash`
+  - **평가 지표:** **유창성(Fluency), 일관성(Coherence), 정확성(Accuracy), 완결성(Completeness)** 의 4가지 핵심 지표를 자체 정의된 루브릭(Rubric)에 따라 평가합니다.
+  - **프로세스:** 이 과정을 자동화하여 모델 개선에 따른 성능 변화를 지속적으로 추적하고, 각 항목별 점수를 높여나가는 방식으로 모델을 고도화합니다. (`LLM_as_a_judgement.py`)
